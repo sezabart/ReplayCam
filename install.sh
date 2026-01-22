@@ -13,12 +13,12 @@ sudo apt install -y dnsmasq python3-pip
 # 3. NETWORK: Configure hotspot using NetworkManager (Native to Pi 5)
 echo "[+] Configuring NetworkManager Hotspot..."
 # Delete old connection if exists
-sudo nmcli con delete Klutch 2>/dev/null
+sudo nmcli con delete ReplayCam 2>/dev/null
 # Create new AP connection
-sudo nmcli con add type wifi ifname wlan0 con-name Klutch autoconnect yes ssid Klutch
+sudo nmcli con add type wifi ifname wlan0 con-name ReplayCam autoconnect yes ssid ReplayCam
 # Set static IP (Manual mode) so we can run our own DHCP/DNS
-sudo nmcli con modify Klutch 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method manual ipv4.addresses 192.168.4.1/24
-sudo nmcli con modify Klutch wifi-sec.key-mgmt wpa-psk wifi-sec.psk Klutchpass1!
+sudo nmcli con modify ReplayCam 802-11-wireless.mode ap 802-11-wireless.band bg ipv4.method manual ipv4.addresses 192.168.4.1/24
+sudo nmcli con modify ReplayCam wifi-sec.key-mgmt wpa-psk wifi-sec.psk ReplayCampass1!
 
 # 4. DNS/DHCP: Configure dnsmasq for Captive Portal
 echo "[+] Configuring dnsmasq..."
