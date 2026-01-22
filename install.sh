@@ -10,6 +10,27 @@ echo "[+] Installing hostapd, dnsmasq and python3"
 sudo apt update
 sudo apt install -y dnsmasq python3-pip
 
+
+# 3. SETUP: camera
+echo "[+] Configuring camera in /boot/firmware/config.txt"
+# Backup the config file first
+sudo cp /boot/firmware/config.txt /boot/firmware/config.txt.backup
+
+# Set camera_auto_detect=0 and add dtoverlay line
+if grep -q "camera_auto_detect" /boot/firmware/config.txt; then
+    sudo sed -i 's/camera_auto_detect=1/camera_auto_detect=0/' /boot/firmware/config.txt
+else
+    echo "camera_auto_detect=0" | sudo tee -a /boot/firmware/config.txt
+fi
+
+# Add dtoverlay line under [all] section or create it if missing
+if grep -q "\[all\]" /boot/firmware/config.txt; then
+    sudo sed -i '/\[all\]/a dtoverlay=imx708,cam0' /boot/firmware/config.txt
+else
+    echo -e "[all]\ndtoverlay=imx708,cam0" | sudo tee -a /boot/firmware/config.txt
+fi
+
+
 # 3. NETWORK: Configure hotspot using NetworkManager (Native to Pi 5)
 echo "[+] Configuring NetworkManager Hotspot..."
 # Delete old connection if exists
@@ -38,12 +59,34 @@ address=/#/192.168.4.1
 EOF
 
 # 5. SERVICE: Create a systemd service for the Python Portal and loop recorder
+
+# Create a service that runs on boot and checks for Ethernet connectivity
+echo "[+] Creating Ethernet-based update and clone service..."
+
+# Create systemd service file
+CURRENT_DIR=$(pwd)
+sudo tee /etc/systemd/system/eth-update-clone.service >/dev/null <<'EOF'
+[Unit]
+Description=Update and Clone ReplayCam on Ethernet Connection
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=$CURRENT_DIR/eth-update-clone.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 echo "[+] Creating Portal System Service..."
 CURRENT_DIR=$(pwd)
 sudo tee /etc/systemd/system/captive-portal.service >/dev/null <<EOF
 [Unit]
 Description=Captive Portal Video Server
-After=network.target dnsmasq.service
+After=eth-update-clone.service dnsmasq.service
 
 [Service]
 Type=simple
@@ -83,6 +126,8 @@ sudo systemctl unmask hostapd 2>/dev/null # Just in case
 sudo systemctl disable hostapd # NM handles the AP, we don't need the service
 sudo systemctl enable dnsmasq
 sudo systemctl restart dnsmasq
+sudo systemctl enable eth-update-clone
+sudo systemctl restart eth-update-clone
 sudo systemctl enable captive-portal
 sudo systemctl restart captive-portal
 sudo systemctl enable loop-record
