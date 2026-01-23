@@ -60,19 +60,17 @@ EOF
 
 # 5. SERVICE: Create a systemd service for the Python Portal and loop recorder
 
-# Create a service that runs on boot and checks for Ethernet connectivity
+# Create a service that runs on boot and checks for Ethernet connectivity & updates
 echo "[+] Creating Ethernet-based update and clone service..."
-
-# Create systemd service file
 CURRENT_DIR=$(pwd)
-sudo tee /etc/systemd/system/eth-update-clone.service >/dev/null <<'EOF'
+sudo tee /etc/systemd/system/eth-update-clone.service >/dev/null <<EOF
 [Unit]
 Description=Update and Clone ReplayCam on Ethernet Connection
 After=network.target
 
 [Service]
 Type=simple
-User=root
+User=$SUDO_USER
 ExecStart=$CURRENT_DIR/eth-update-clone.sh
 Restart=on-failure
 RestartSec=10
@@ -80,6 +78,8 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
+
+sudo chmod +x $CURRENT_DIR/eth-update-clone.sh
 
 echo "[+] Creating Portal System Service..."
 CURRENT_DIR=$(pwd)
