@@ -62,7 +62,7 @@ class CaptiveHandler(BaseHTTPRequestHandler):
         videos = []
         if os.path.exists(RECORDINGS_DIR):
             for f in os.listdir(RECORDINGS_DIR):
-                if f.lower().endswith(('.mp4', '.mov', '.mkv', '.avi')):
+                if f.lower().endswith(('.mp4', '.mov', '.mkv', '.avi')) and not f.startswith('raw'):
                     size = os.path.getsize(os.path.join(RECORDINGS_DIR, f))
                     videos.append({"name": f, "size": self.format_size(size)})
 
