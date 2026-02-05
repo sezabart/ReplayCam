@@ -12,7 +12,8 @@ CURRENT_DIR=$(pwd)
 REBOOT_REQUIRED=false
 
 echo "[+] Updating and installing dependencies..."
-apt update && apt install -y dnsmasq git ffmpeg python3-picamera2 libcamera-apps-lite --no-install-recommends
+apt update && sudo apt install -y dnsmasq git ffmpeg 
+sudo apt install -y python3-picamera2 --no-install-recommends
 
 # 1. USB GADGET MODE
 echo "[+] Enabling USB Gadget Mode..."
@@ -25,21 +26,33 @@ else
 fi
 
 # 2. CAMERA DETECTION & CONFIG
-echo "[+] Checking for IMX708 Camera..."
-if libcamera-hello --list-cameras | grep -q "imx708"; then
-    echo "✔ Camera already detected."
-else
-    echo "[!] Configuring IMX708 in /boot/firmware/config.txt..."
+echo "[+] Checking camera status..."
+
+# Check if the system reports no cameras at all
+if rpicam-hello --list-cameras 2>&1 | grep -q "No cameras available!"; then
+    echo "[!] No cameras detected. Configuring IMX708 overlay in /boot/firmware/config.txt..."
+    
+    # Backup the config
     cp /boot/firmware/config.txt /boot/firmware/config.txt.backup
-    
-    # Disable auto-detect and add overlay
-    sed -i 's/^camera_auto_detect=1/camera_auto_detect=0/' /boot/firmware/config.txt
-    [[ ! $(grep -q "camera_auto_detect=0" /boot/firmware/config.txt) ]] && echo "camera_auto_detect=0" >> /boot/firmware/config.txt
-    
-    if ! grep -q "dtoverlay=imx708,cam0" /boot/firmware/config.txt; then
+
+    # 1. Handle camera_auto_detect
+    # If it's set to 1, change it to 0.
+    if grep -q "^camera_auto_detect=1" /boot/firmware/config.txt; then
+        sed -i 's/^camera_auto_detect=1/camera_auto_detect=0/' /boot/firmware/config.txt
+    # If the setting doesn't exist at all, add it.
+    elif ! grep -q "^camera_auto_detect=0" /boot/firmware/config.txt; then
+        echo "camera_auto_detect=0" >> /boot/firmware/config.txt
+    fi
+
+    # 2. Add the overlay if it's not already there
+    if ! grep -q "^dtoverlay=imx708,cam0" /boot/firmware/config.txt; then
         echo "dtoverlay=imx708,cam0" >> /boot/firmware/config.txt
     fi
+
+    echo "✔ Configuration updated. A reboot is required."
     REBOOT_REQUIRED=true
+else
+    echo "✔ Camera is already detected and available. No changes made."
 fi
 
 # 3. NETWORK: Configure Hotspot
@@ -72,7 +85,7 @@ EOF
 # Create a service that runs on boot and checks for Ethernet or USB connectivity & updates
 echo "[+] Creating Ethernet-or-USB-based update and clone service..."
 CURRENT_DIR=$(pwd)
-sudo tee /etc/systemd/system/update.service >/dev/null <<EOF
+sudo tee /etc/systemd/system/update-script.service >/dev/null <<EOF
 [Unit]
 Description=Update and Clone ReplayCam on Ethernet Connection
 After=network.target
@@ -98,7 +111,7 @@ After=update.service dnsmasq.service
 Type=simple
 User=$SUDO_USER
 WorkingDirectory=$CURRENT_DIR
-ExecStart=/usr/bin/python3 $CURRENT_DIR/portal.py
+ExecStart=sudo /usr/bin/python3 $CURRENT_DIR/portal.py
 Restart=always
 [Install]
 WantedBy=multi-user.target
@@ -119,18 +132,18 @@ ExecStart=/usr/bin/python3 $CURRENT_DIR/loop_record.py
 Restart=always
 [Install]
 WantedBy=multi-user.target
-EOF 
+EOF
 
 # 6. FINALIZE
-systemctl daemon-reload
-systemctl enable dnsmasq update-script captive-portal loop-record
+sudo systemctl daemon-reload
+sudo systemctl enable dnsmasq update-script captive-portal loop-record
 
 if [ "$REBOOT_REQUIRED" = true ]; then
     echo "-----------------------------------------------"
     echo "✔ Hardware changes detected. Rebooting in 3s..."
     echo "-----------------------------------------------"
     sleep 3
-    reboot
+    sudo reboot
 else
     echo "✔ Setup complete. No reboot needed."
 fi

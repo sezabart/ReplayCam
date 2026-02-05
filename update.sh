@@ -28,6 +28,8 @@ while ! check_internet; do
 done
 
 # Perform apt update and upgrade
-apt-get update && apt-get upgrade -y
+sudo apt update
+sudo apt upgrade -y
 # Update the repo
+cd $REPO_PATH
 git pull origin main
