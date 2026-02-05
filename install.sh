@@ -12,10 +12,7 @@ CURRENT_DIR=$(pwd)
 REBOOT_REQUIRED=false
 
 echo "[+] Updating and installing dependencies..."
-sudo apt update
-sudo apt upgrade
-sudo apt install -y dnsmasq git ffmpeg 
-sudo apt install -y python3-picamera2 python3-opencv --no-install-recommends
+apt update && apt install -y dnsmasq git ffmpeg python3-picamera2 libcamera-apps-lite --no-install-recommends
 
 # 1. USB GADGET MODE
 echo "[+] Enabling USB Gadget Mode..."
@@ -28,46 +25,32 @@ else
 fi
 
 # 2. CAMERA DETECTION & CONFIG
-echo "[+] Checking camera status..."
-
-# Check if the system reports no cameras at all
-if rpicam-hello --list-cameras 2>&1 | grep -q "No cameras available!"; then
-    echo "[!] No cameras detected. Configuring IMX708 overlay in /boot/firmware/config.txt..."
-    
-    # Backup the config
+echo "[+] Checking for IMX708 Camera..."
+if libcamera-hello --list-cameras | grep -q "imx708"; then
+    echo "✔ Camera already detected."
+else
+    echo "[!] Configuring IMX708 in /boot/firmware/config.txt..."
     cp /boot/firmware/config.txt /boot/firmware/config.txt.backup
-
-    # 1. Handle camera_auto_detect
-    # If it's set to 1, change it to 0.
-    if grep -q "^camera_auto_detect=1" /boot/firmware/config.txt; then
-        sed -i 's/^camera_auto_detect=1/camera_auto_detect=0/' /boot/firmware/config.txt
-    # If the setting doesn't exist at all, add it.
-    elif ! grep -q "^camera_auto_detect=0" /boot/firmware/config.txt; then
-        echo "camera_auto_detect=0" >> /boot/firmware/config.txt
-    fi
-
-    # 2. Add the overlay if it's not already there
-    if ! grep -q "^dtoverlay=imx708,cam0" /boot/firmware/config.txt; then
+    
+    # Disable auto-detect and add overlay
+    sed -i 's/^camera_auto_detect=1/camera_auto_detect=0/' /boot/firmware/config.txt
+    [[ ! $(grep -q "camera_auto_detect=0" /boot/firmware/config.txt) ]] && echo "camera_auto_detect=0" >> /boot/firmware/config.txt
+    
+    if ! grep -q "dtoverlay=imx708,cam0" /boot/firmware/config.txt; then
         echo "dtoverlay=imx708,cam0" >> /boot/firmware/config.txt
     fi
-
-    echo "✔ Configuration updated. A reboot is required."
     REBOOT_REQUIRED=true
-else
-    echo "✔ Camera is already detected and available. No changes made."
 fi
 
 # 3. NETWORK: Configure Hotspot
-echo "[+] Removing current wifi connections..."
-WIFI_UUID=$(nmcli -g UUID,NAME con show | grep wifi | cut -d: -f1)
-[ -n "$WIFI_UUID" ] && sudo nmcli con delete "$WIFI_UUID"
-echo "[?] Should not have any connections left:"
-nmcli connection show | grep wifi | grep -E -o '[0-9a-f\-]{36}' 
+echo "[+] Cleaning up old ReplayCam connections..."
+OLD_UUID=$(nmcli -g UUID,NAME con show | grep ReplayCam | cut -d: -f1)
+[ -n "$OLD_UUID" ] && nmcli con delete "$OLD_UUID"
 
 echo "[+] Creating Hotspot on wlan0..."
-sudo nmcli con add type wifi ifname wlan0 con-name ReplayCam autoconnect yes ssid ReplayCam mode ap
-sudo nmcli con modify ReplayCam 802-11-wireless.band bg ipv4.method manual ipv4.addresses 192.168.4.1/24
-sudo nmcli con modify ReplayCam wifi-sec.key-mgmt wpa-psk wifi-sec.psk ReplayCampass1!
+nmcli con add type wifi ifname wlan0 con-name ReplayCam autoconnect yes ssid ReplayCam mode ap
+nmcli con modify ReplayCam 802-11-wireless.band bg ipv4.method manual ipv4.addresses 192.168.4.1/24
+nmcli con modify ReplayCam wifi-sec.key-mgmt wpa-psk wifi-sec.psk ReplayCampass1!
 
 # 4. DNS/DHCP: dnsmasq
 # Note: We bind to both wlan0 (Hotspot) and usb0 (Gadget) for maximum flexibility
@@ -127,7 +110,11 @@ if [ "$REBOOT_REQUIRED" = true ]; then
     echo "✔ Hardware changes detected. Rebooting in 3s..."
     echo "-----------------------------------------------"
     sleep 3
+<<<<<<< HEAD
     sudo reboot
+=======
+    reboot
+>>>>>>> ced1f32 (Made a better robust update that can work with usb-gadget mode.)
 else
     echo "✔ Setup complete. No reboot needed."
 fi
