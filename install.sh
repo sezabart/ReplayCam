@@ -92,7 +92,8 @@ After=network.target
 [Service]
 Type=simple
 User=$SUDO_USER
-ExecStart=$CURRENT_DIR/update.sh
+WorkingDirectory=$CURRENT_DIR
+ExecStart=sudo $CURRENT_DIR/update.sh
 Restart=on-failure
 RestartSec=10
 [Install]
