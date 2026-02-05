@@ -12,8 +12,7 @@ from picamera2.outputs import CircularOutput
 # --- KLUTCH CONFIGURATIE ---
 # Opslaglocatie voor de clips
 STORAGE_PATH = "recordings"
-# Naam van je overlay bestand (moet 1080x1920 PNG zijn)
-OVERLAY_FILE = "Overlay.png"
+# Overlay not supported anymore since FFMPEG stream copy
 # GPIO pin van de drukknop
 BUTTON_PIN = 17 
 # Hoeveel seconden 'terug in de tijd' (de actie)
@@ -38,13 +37,6 @@ class ReplaySystem:
         self.output = None
         self.is_running = False
 
-        # Controleer overlay
-        if not os.path.exists(OVERLAY_FILE):
-            print(f"[WARNING] Overlay bestand niet gevonden op: {OVERLAY_FILE}")
-            print("Video's worden verwerkt ZONDER overlay.")
-            self.has_overlay = False
-        else:
-            self.has_overlay = True
 
     def start(self):
         # Configureer Camera (1080p @ 30fps)
@@ -81,46 +73,33 @@ class ReplaySystem:
         self.process_video(raw_filename, final_filename)
 
     def process_video(self, input_file, output_file):
-        # Stap 1: Roteer de video 90 graden met de klok mee (transpose=1)
-        # Gebruik transpose=2 voor tegen de klok in als je camera andersom hangt.
-        # [0:v] is de raw video input.
-        filters = "[0:v]transpose=2[rotated]" 
+        # Now switched to stream copy to just put the existing h264 in a container
+        # Massively faster but no support for overlay
+        # Since we are using stream copy (-c:v copy), we cannot use -filter_complex.
+        # We use metadata to tell the phone to play the video rotated.
+        # '270' metadata is equivalent to transpose=2 (90 deg counter-clockwise).
         
-        final_map = "[rotated]" # Standaard output is de gedraaide video
-
-        if self.has_overlay:
-            # Als er een overlay is, plakken we die BOVENOP de gedraaide video
-            # We gaan ervan uit dat je Overlay.png nu 1080x1920 (Staand) is!
-            filters += ";[rotated][1:v]overlay=0:0[output]"
-            final_map = "[output]"
-
         cmd = [
             'ffmpeg', '-y',
-            '-framerate', str(FPS),
-            '-i', input_file
-        ]
-
-        if self.has_overlay:
-            cmd.extend(['-i', OVERLAY_FILE])
-        
-        cmd.extend([
-            '-filter_complex', filters,
-            '-map', final_map, # Zorg dat we de juiste stream pakken
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast',
-            '-crf', '23',
-            '-pix_fmt', 'yuv420p',
+            '-r', str(FPS),          # Set framerate before input for raw streams
+            '-i', input_file,
+            '-c:v', 'copy',          # Direct stream copy (No re-encoding!)
+            '-metadata:s:v', 'rotate=270', # Metadata rotation (Fast & low RAM)
+            '-movflags', '+faststart',     # Better for mobile playback
             output_file
-        ])
-        
+        ]
         try:
-            # Draai FFmpeg
+            # Run FFmpeg
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"[SUCCESS] Verticale Clip klaar: {output_file}")
+            print(f"[SUCCESS] High-speed repackaging complete: {output_file}")
+            
+            # Cleanup
             os.remove(input_file)
             
         except subprocess.CalledProcessError as e:
             print(f"[ERROR] Fout tijdens verwerken video: {e}")
+
+            
 
     def stop(self):
         if self.is_running:
