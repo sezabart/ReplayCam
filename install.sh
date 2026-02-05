@@ -70,9 +70,9 @@ else
 fi
 
 # 3. NETWORK: Configure Hotspot
-echo "[+] Cleaning up old ReplayCam connections..."
-OLD_UUID=$(nmcli -g UUID,NAME con show | grep ReplayCam | cut -d: -f1)
-[ -n "$OLD_UUID" ] && nmcli con delete "$OLD_UUID"
+echo "[+] Removing current wifi connections..."
+WIFI_UUID=$(nmcli -g UUID,NAME con show | grep wifi | cut -d: -f1)
+[ -n "$WIFI_UUID" ] && nmcli con delete "$WIFI_UUID"
 
 echo "[+] Creating Hotspot on wlan0..."
 nmcli con add type wifi ifname wlan0 con-name ReplayCam autoconnect yes ssid ReplayCam mode ap
