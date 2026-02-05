@@ -72,7 +72,9 @@ fi
 # 3. NETWORK: Configure Hotspot
 echo "[+] Removing current wifi connections..."
 WIFI_UUID=$(nmcli -g UUID,NAME con show | grep wifi | cut -d: -f1)
-[ -n "$WIFI_UUID" ] && nmcli con delete "$WIFI_UUID"
+[ -n "$WIFI_UUID" ] && sudo nmcli con delete "$WIFI_UUID"
+echo "[?] Should not have any connections left:"
+nmcli connection show | grep wifi | grep -E -o '[0-9a-f\-]{36}' 
 
 echo "[+] Creating Hotspot on wlan0..."
 nmcli con add type wifi ifname wlan0 con-name ReplayCam autoconnect yes ssid ReplayCam mode ap
@@ -92,9 +94,59 @@ dhcp-range=192.168.4.10,192.168.4.250,12h
 address=/#/192.168.4.1
 EOF
 
-# 5. SYSTEMD SERVICES
-echo "[+] Setting up Systemd Services..."
-# (Same create_service logic as before, ensuring update-script runs before others)
+# 5. SERVICES: Create a systemd service for each function
+
+# Create a service that runs on boot and checks for Ethernet or USB connectivity & updates
+echo "[+] Creating Ethernet-or-USB-based update and clone service..."
+CURRENT_DIR=$(pwd)
+sudo tee /etc/systemd/system/update.service >/dev/null <<EOF
+[Unit]
+Description=Update and Clone ReplayCam on Ethernet Connection
+After=network.target
+[Service]
+Type=simple
+User=$SUDO_USER
+ExecStart=$CURRENT_DIR/update.sh
+Restart=on-failure
+RestartSec=10
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo chmod +x $CURRENT_DIR/update.sh
+
+# Captive portal service
+echo "[+] Creating Portal System Service..."
+CURRENT_DIR=$(pwd)
+sudo tee /etc/systemd/system/captive-portal.service >/dev/null <<EOF
+[Unit]
+Description=Captive Portal Video Server
+After=update.service dnsmasq.service
+[Service]
+Type=simple
+User=$SUDO_USER
+WorkingDirectory=$CURRENT_DIR
+ExecStart=/usr/bin/python3 $CURRENT_DIR/portal.py
+Restart=always
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Loop record service
+echo "[+] Creating Loop Record System Service..."
+CURRENT_DIR=$(pwd)
+sudo tee /etc/systemd/system/loop-record.service >/dev/null <<EOF
+[Unit]
+Description=Loop Recorder
+After=captive-portal.service
+[Service]
+Type=simple
+User=$SUDO_USER
+WorkingDirectory=$CURRENT_DIR
+ExecStart=/usr/bin/python3 $CURRENT_DIR/loop_record.py
+Restart=always
+[Install]
+WantedBy=multi-user.target
+EOF 
 
 # 6. FINALIZE
 systemctl daemon-reload
