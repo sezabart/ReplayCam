@@ -65,6 +65,13 @@ class ReplaySystem:
 
         self.picam2.start()
 
+        # Overlay
+        overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
+        if overlay.shape[:2] == [1920, 1080]:
+            self.picam2.set_overlay(overlay) # Picamera2 can accept bitmap overlays
+        else:
+            print(f"[ERROR] Overlay is wrong dimensions: {overlay.shape[:2]}")
+
         # Encoder & Buffer Setup
         self.encoder = H264Encoder(bitrate=BITRATE, repeat=True)  #H264 is best supported everywhere
         self.output = CircularOutput(buffersize=BUFFER_FRAMES) # Will keep recording in RAM looping over itself untill stopped
