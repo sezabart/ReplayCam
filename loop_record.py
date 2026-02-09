@@ -9,11 +9,22 @@ from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
 from picamera2.outputs import CircularOutput
 
+<<<<<<< HEAD
 # --- KLUTCH CONFIGURATIE ---
 # Opslaglocatie voor de clips
 STORAGE_PATH = "recordings"
 # Overlay not supported anymore since FFMPEG stream copy
 # GPIO pin van de drukknop
+=======
+import cv2
+
+# --- REPLAYCAM CONFIG ---
+# Location of stored clips
+STORAGE_PATH = "recordings"
+# Overlay now via bitmap on picamera2
+OVERLAY = "overlay.png"
+# GPIO pin of button (or remote)
+>>>>>>> e1db8a7 (Implement overlay in picamera2)
 BUTTON_PIN = 17 
 # Hoeveel seconden 'terug in de tijd' (de actie)
 PRE_TRIGGER_DURATION = 25
@@ -46,6 +57,13 @@ class ReplaySystem:
         )
         self.picam2.configure(config)
         self.picam2.start()
+
+        # Overlay
+        overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
+        if overlay.shape[:2] == [1920, 1080]:
+            self.picam2.set_overlay(overlay) # Picamera2 can accept bitmap overlays
+        else:
+            print(f"[ERROR] Overlay is wrong dimensions: {overlay.shape[:2]}")
 
         # Encoder & Buffer Setup
         self.encoder = H264Encoder(bitrate=BITRATE, repeat=True)
