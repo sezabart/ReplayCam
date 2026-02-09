@@ -67,8 +67,8 @@ class ReplaySystem:
 
         # Overlay
         self.overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
-        if self.overlay.shape[:2] == [1920, 1080]:
-            self.picam2.pre_callback = apply_overlay
+        if self.overlay.shape[:2] == RESOLUTION:
+            self.picam2.pre_callback = self.apply_overlay
         else:
             print(f"[ERROR] Overlay is wrong dimensions: {self.overlay.shape[:2]}")
 
@@ -81,7 +81,7 @@ class ReplaySystem:
         # Start opname naar RAM
         self.picam2.start_recording(self.encoder, self.output)
         self.is_running = True
-        print("[REPLAYCAM] System ONLINE. Buffer recording in RAM.")
+        print("[KLUTCH] Systeem ONLINE. Buffer loopt in RAM.")
 
     def apply_overlay(request):
         with MappedArray(request, "main") as m:
