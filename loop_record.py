@@ -46,7 +46,7 @@ class ReplaySystem:
 
     def apply_overlay(self, request):
         with MappedArray(request, "main") as m:
-            cv2.add(m.array, self.overlay)
+            cv2.addWeighted(m.array, 0.8, self.overlay, 0.2, 0)
 
     def start(self):
         # Configure Camera
@@ -100,7 +100,7 @@ class ReplaySystem:
         cmd = [
             'ffmpeg', '-y',
             '-r', str(FPS),          # Set framerate before input for raw streams
-            '-display_rotation', ROTATION,
+            '-display_rotation', str(ROTATION),
             '-i', input_file,
             '-c:v', 'copy',          # Direct stream copy (No re-encoding!)
             '-movflags', 'faststart',     # Better for mobile playback
