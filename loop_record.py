@@ -100,7 +100,7 @@ class ReplaySystem:
         cmd = [
             'ffmpeg', '-y',
             '-r', str(FPS),          # Set framerate before input for raw streams
-            '-display_rotation', ROTATION
+            '-display_rotation', ROTATION,
             '-i', input_file,
             '-c:v', 'copy',          # Direct stream copy (No re-encoding!)
             '-movflags', 'faststart',     # Better for mobile playback
