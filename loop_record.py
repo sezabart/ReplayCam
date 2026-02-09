@@ -46,7 +46,9 @@ class ReplaySystem:
 
     def apply_overlay(self, request):
         with MappedArray(request, "main") as m:
-            cv2.addWeighted(m.array, 0.8, self.overlay, 0.2, 0)
+            # Place overlay image efficiently over directly mapped buffer frame
+            pass
+
 
     def start(self):
         # Configure Camera
@@ -59,10 +61,7 @@ class ReplaySystem:
 
         # Overlay
         self.overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
-        if self.overlay.shape[:2] == (1680, 1920): # RAW Resolution?
-            self.picam2.pre_callback = self.apply_overlay
-        else:
-            print(f"[ERROR] Overlay is wrong dimensions: {self.overlay.shape[:2]}")
+        
 
         self.picam2.start()
 

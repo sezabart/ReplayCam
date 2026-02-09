@@ -1,36 +1,9 @@
 #!/bin/bash
 
-<<<<<<< HEAD
-# 1. CLEANUP: Remove conflicting legacy packages
-echo "[-] Removing conflicting packages (dhcpcd5)..."
-sudo systemctl stop dhcpcd 2>/dev/null
-sudo apt remove -y dhcpcd5
-
-# 2. INSTALL: Required tools
-echo "[+] Installing hostapd, dnsmasq and python3"
-sudo apt update
-sudo apt install -y dnsmasq python3-pip
-
-echo "[+] Updating and installing dependencies..."
-apt update && sudo apt install -y dnsmasq git ffmpeg 
-sudo apt install -y python3-picamera2 python3-opencv --no-install-recommends
-
-# 3. SETUP: camera
-echo "[+] Configuring camera in /boot/firmware/config.txt"
-# Backup the config file first
-sudo cp /boot/firmware/config.txt /boot/firmware/config.txt.backup
-
-# Set camera_auto_detect=0 and add dtoverlay line
-if grep -q "camera_auto_detect" /boot/firmware/config.txt; then
-    sudo sed -i 's/camera_auto_detect=1/camera_auto_detect=0/' /boot/firmware/config.txt
-else
-    echo "camera_auto_detect=0" | sudo tee -a /boot/firmware/config.txt
-=======
 # Ensure script is run with sudo
 if [ "$EUID" -ne 0 ]; then 
   echo "Please run as root (use sudo)"
   exit
->>>>>>> ced1f32 (Made a better robust update that can work with usb-gadget mode.)
 fi
 
 # Variables
@@ -39,8 +12,10 @@ CURRENT_DIR=$(pwd)
 REBOOT_REQUIRED=false
 
 echo "[+] Updating and installing dependencies..."
-apt update && sudo apt install -y dnsmasq git ffmpeg 
-sudo apt install -y python3-picamera2 --no-install-recommends
+sudo apt update
+sudo apt upgrade
+sudo apt install -y dnsmasq git ffmpeg 
+sudo apt install -y python3-picamera2 python3-opencv --no-install-recommends
 
 # 1. USB GADGET MODE
 echo "[+] Enabling USB Gadget Mode..."
@@ -90,9 +65,9 @@ echo "[?] Should not have any connections left:"
 nmcli connection show | grep wifi | grep -E -o '[0-9a-f\-]{36}' 
 
 echo "[+] Creating Hotspot on wlan0..."
-nmcli con add type wifi ifname wlan0 con-name ReplayCam autoconnect yes ssid ReplayCam mode ap
-nmcli con modify ReplayCam 802-11-wireless.band bg ipv4.method manual ipv4.addresses 192.168.4.1/24
-nmcli con modify ReplayCam wifi-sec.key-mgmt wpa-psk wifi-sec.psk ReplayCampass1!
+sudo nmcli con add type wifi ifname wlan0 con-name ReplayCam autoconnect yes ssid ReplayCam mode ap
+sudo nmcli con modify ReplayCam 802-11-wireless.band bg ipv4.method manual ipv4.addresses 192.168.4.1/24
+sudo nmcli con modify ReplayCam wifi-sec.key-mgmt wpa-psk wifi-sec.psk ReplayCampass1!
 
 # 4. DNS/DHCP: dnsmasq
 # Note: We bind to both wlan0 (Hotspot) and usb0 (Gadget) for maximum flexibility
@@ -109,32 +84,13 @@ EOF
 
 # 5. SERVICES: Create a systemd service for each function
 
-# Create a service that runs on boot and checks for Ethernet or USB connectivity & updates
-echo "[+] Creating Ethernet-or-USB-based update and clone service..."
-CURRENT_DIR=$(pwd)
-sudo tee /etc/systemd/system/update-script.service >/dev/null <<EOF
-[Unit]
-Description=Update and Clone ReplayCam on Ethernet Connection
-After=network.target
-[Service]
-Type=simple
-User=$SUDO_USER
-WorkingDirectory=$CURRENT_DIR
-ExecStart=sudo $CURRENT_DIR/update.sh
-Restart=on-failure
-RestartSec=10
-[Install]
-WantedBy=multi-user.target
-EOF
-sudo chmod +x $CURRENT_DIR/update.sh
-
 # Captive portal service
 echo "[+] Creating Portal System Service..."
 CURRENT_DIR=$(pwd)
 sudo tee /etc/systemd/system/captive-portal.service >/dev/null <<EOF
 [Unit]
 Description=Captive Portal Video Server
-After=update.service dnsmasq.service
+After=dnsmasq.service
 [Service]
 Type=simple
 User=$SUDO_USER
@@ -164,7 +120,7 @@ EOF
 
 # 6. FINALIZE
 sudo systemctl daemon-reload
-sudo systemctl enable dnsmasq update-script captive-portal loop-record
+sudo systemctl enable dnsmasq captive-portal loop-record
 
 if [ "$REBOOT_REQUIRED" = true ]; then
     echo "-----------------------------------------------"
