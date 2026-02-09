@@ -5,7 +5,7 @@ import subprocess
 import signal
 import sys
 from gpiozero import Button
-from picamera2 import Picamera2
+from picamera2 import Picamera2, MappedArray
 from picamera2.encoders import H264Encoder
 from picamera2.outputs import CircularOutput
 
@@ -56,14 +56,16 @@ class ReplaySystem:
             controls={"FrameDurationLimits": (int(1000000 / FPS), int(1000000 / FPS))}
         )
         self.picam2.configure(config)
-        self.picam2.start()
+        
 
         # Overlay
-        overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
-        if overlay.shape[:2] == [1920, 1080]:
-            self.picam2.set_overlay(overlay) # Picamera2 can accept bitmap overlays
+        self.overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
+        if self.overlay.shape[:2] == [1920, 1080]:
+            self.picam2.pre_callback = apply_overlay
         else:
-            print(f"[ERROR] Overlay is wrong dimensions: {overlay.shape[:2]}")
+            print(f"[ERROR] Overlay is wrong dimensions: {self.overlay.shape[:2]}")
+
+        self.picam2.start()
 
         # Encoder & Buffer Setup
         self.encoder = H264Encoder(bitrate=BITRATE, repeat=True)
@@ -73,6 +75,10 @@ class ReplaySystem:
         self.picam2.start_recording(self.encoder, self.output)
         self.is_running = True
         print("[KLUTCH] Systeem ONLINE. Buffer loopt in RAM.")
+
+    def apply_overlay(request):
+        with MappedArray(request, "main") as m:
+            cv2.add(m.array, self.overlay)
 
     def trigger_action(self):
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

@@ -10,6 +10,9 @@ echo "[+] Installing hostapd, dnsmasq and python3"
 sudo apt update
 sudo apt install -y dnsmasq python3-pip
 
+echo "[+] Updating and installing dependencies..."
+apt update && sudo apt install -y dnsmasq git ffmpeg 
+sudo apt install -y python3-picamera2 python3-opencv --no-install-recommends
 
 # 3. SETUP: camera
 echo "[+] Configuring camera in /boot/firmware/config.txt"
