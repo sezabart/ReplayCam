@@ -58,7 +58,7 @@ class ReplaySystem:
 
         # Overlay
         self.overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
-        if self.overlay.shape[:2] == RESOLUTION:
+        if self.overlay.shape[:2] == (1680, 1920): # RAW Resolution?
             self.picam2.pre_callback = self.apply_overlay
         else:
             print(f"[ERROR] Overlay is wrong dimensions: {self.overlay.shape[:2]}")
@@ -81,11 +81,7 @@ class ReplaySystem:
         # Start opname naar RAM
         self.picam2.start_recording(self.encoder, self.output)
         self.is_running = True
-        print("[KLUTCH] Systeem ONLINE. Buffer loopt in RAM.")
-
-    def apply_overlay(request):
-        with MappedArray(request, "main") as m:
-            cv2.add(m.array, self.overlay)
+        print("[SYSTEM] Operational, running in RAM")
 
     def trigger_action(self):
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -107,17 +103,7 @@ class ReplaySystem:
         self.process_video(raw_filename, final_filename)
 
     def process_video(self, input_file, output_file):
-        # Transpose=1 rotates 90 degrees, 2 for 270 (the other way)
-        # [0:v] is the raw video input.
-        filters = "[0:v]transpose=2[rotated]" 
-        
-        final_map = "[rotated]" # Make the standard output the rotated one
 
-        if self.has_overlay:
-            # If overlay, add it on top op video
-            # ASSUMING OVERLAY IS SAME AS RESOLUTION
-            filters += ";[rotated][1:v]overlay=0:0[output]"
-            final_map = "[output]"
 
         cmd = [
             'ffmpeg', '-y',
@@ -127,7 +113,7 @@ class ReplaySystem:
             '-metadata:s:v:0', 'rotate=90', # Metadata rotation (Fast & low RAM)
             '-movflags', '+faststart',     # Better for mobile playback
             output_file
-        ])
+        ]
         
         try:
             start_time = time.time()
