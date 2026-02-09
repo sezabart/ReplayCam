@@ -9,13 +9,6 @@ from picamera2 import Picamera2, MappedArray
 from picamera2.encoders import H264Encoder
 from picamera2.outputs import CircularOutput
 
-<<<<<<< HEAD
-# --- KLUTCH CONFIGURATIE ---
-# Opslaglocatie voor de clips
-STORAGE_PATH = "recordings"
-# Overlay not supported anymore since FFMPEG stream copy
-# GPIO pin van de drukknop
-=======
 import cv2
 
 # --- REPLAYCAM CONFIG ---
@@ -24,24 +17,15 @@ STORAGE_PATH = "recordings"
 # Overlay now via bitmap on picamera2
 OVERLAY = "overlay.png"
 # GPIO pin of button (or remote)
->>>>>>> e1db8a7 (Implement overlay in picamera2)
 BUTTON_PIN = 17 
 # Hoeveel seconden 'terug in de tijd' (de actie)
 PRE_TRIGGER_DURATION = 25
-<<<<<<< HEAD
-# Hoeveel seconden 'na de knop' (de reactie/juichen)
-POST_TRIGGER_DURATION = 2
-# Video instellingen
-FPS = 30
-BITRATE = 15000000 # 15Mbps voor hoge kwaliteit raw input
-=======
 # Seconds after trigger to record (celebration)
 POST_TRIGGER_DURATION = 5
 # Video settings
 RESOLUTION = (1920, 1080)
 FPS = 25
 BITRATE = 15000000 # 15Mbps bitrate
->>>>>>> 0919ef7 (Try  to fix overlay)
 
 # Berekende buffer grootte
 BUFFER_FRAMES = PRE_TRIGGER_DURATION * FPS 
@@ -116,7 +100,7 @@ class ReplaySystem:
             '-r', str(FPS),          # Set framerate before input for raw streams
             '-i', input_file,
             '-c:v', 'copy',          # Direct stream copy (No re-encoding!)
-            '-metadata:s:v', 'rotate=270', # Metadata rotation (Fast & low RAM)
+            '-metadata:s:v:0', 'rotate=90', # Metadata rotation (Fast & low RAM)
             '-movflags', '+faststart',     # Better for mobile playback
             output_file
         ]
