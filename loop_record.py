@@ -66,11 +66,13 @@ class ReplaySystem:
         self.picam2.start()
 
         # Overlay
-        overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
-        if overlay.shape[:2] == [1920, 1080]:
-            self.picam2.set_overlay(overlay) # Picamera2 can accept bitmap overlays
+        self.overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
+        if self.overlay.shape[:2] == [1920, 1080]:
+            self.picam2.pre_callback = apply_overlay
         else:
-            print(f"[ERROR] Overlay is wrong dimensions: {overlay.shape[:2]}")
+            print(f"[ERROR] Overlay is wrong dimensions: {self.overlay.shape[:2]}")
+
+        self.picam2.start()
 
         # Encoder & Buffer Setup
         self.encoder = H264Encoder(bitrate=BITRATE, repeat=True)  #H264 is best supported everywhere
@@ -80,6 +82,10 @@ class ReplaySystem:
         self.picam2.start_recording(self.encoder, self.output)
         self.is_running = True
         print("[REPLAYCAM] System ONLINE. Buffer recording in RAM.")
+
+    def apply_overlay(request):
+        with MappedArray(request, "main") as m:
+            cv2.add(m.array, self.overlay)
 
     def trigger_action(self):
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
