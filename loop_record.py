@@ -28,11 +28,20 @@ OVERLAY = "overlay.png"
 BUTTON_PIN = 17 
 # Hoeveel seconden 'terug in de tijd' (de actie)
 PRE_TRIGGER_DURATION = 25
+<<<<<<< HEAD
 # Hoeveel seconden 'na de knop' (de reactie/juichen)
 POST_TRIGGER_DURATION = 2
 # Video instellingen
 FPS = 30
 BITRATE = 15000000 # 15Mbps voor hoge kwaliteit raw input
+=======
+# Seconds after trigger to record (celebration)
+POST_TRIGGER_DURATION = 5
+# Video settings
+RESOLUTION = (1920, 1080)
+FPS = 25
+BITRATE = 15000000 # 15Mbps bitrate
+>>>>>>> 0919ef7 (Try  to fix overlay)
 
 # Berekende buffer grootte
 BUFFER_FRAMES = PRE_TRIGGER_DURATION * FPS 
@@ -48,11 +57,14 @@ class ReplaySystem:
         self.output = None
         self.is_running = False
 
+    def apply_overlay(self, request):
+        with MappedArray(request, "main") as m:
+            cv2.add(m.array, self.overlay)
 
     def start(self):
         # Configureer Camera (1080p @ 30fps)
         config = self.picam2.create_video_configuration(
-            main={"size": (1920, 1080), "format": "YUV420"}, 
+            main={"size": RESOLUTION, "format": "YUV420"}, 
             controls={"FrameDurationLimits": (int(1000000 / FPS), int(1000000 / FPS))}
         )
         self.picam2.configure(config)
@@ -60,8 +72,8 @@ class ReplaySystem:
 
         # Overlay
         self.overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
-        if self.overlay.shape[:2] == [1920, 1080]:
-            self.picam2.pre_callback = apply_overlay
+        if self.overlay.shape[:2] == RESOLUTION:
+            self.picam2.pre_callback = self.apply_overlay
         else:
             print(f"[ERROR] Overlay is wrong dimensions: {self.overlay.shape[:2]}")
 
@@ -75,10 +87,6 @@ class ReplaySystem:
         self.picam2.start_recording(self.encoder, self.output)
         self.is_running = True
         print("[KLUTCH] Systeem ONLINE. Buffer loopt in RAM.")
-
-    def apply_overlay(request):
-        with MappedArray(request, "main") as m:
-            cv2.add(m.array, self.overlay)
 
     def trigger_action(self):
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
