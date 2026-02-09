@@ -92,12 +92,19 @@ class ReplaySystem:
         self.process_video(raw_filename, final_filename)
 
     def process_video(self, input_file, output_file):
-        # Now switched to stream copy to just put the existing h264 in a container
-        # Massively faster but no support for overlay or edits
-        # Since we are using stream copy (-c:v copy), we cannot use -filter_complex.
-        # We use metadata to tell the phone to play the video rotated.
-        # '270' metadata is equivalent to transpose=2 (90 deg counter-clockwise).
+        # Stap 1: Roteer de video 90 graden met de klok mee (transpose=1)
+        # Gebruik transpose=2 voor tegen de klok in als je camera andersom hangt.
+        # [0:v] is de raw video input.
+        filters = "[0:v]transpose=2[rotated]" 
         
+        final_map = "[rotated]" # Standaard output is de gedraaide video
+
+        if self.has_overlay:
+            # Als er een overlay is, plakken we die BOVENOP de gedraaide video
+            # We gaan ervan uit dat je Overlay.png nu 1080x1920 (Staand) is!
+            filters += ";[rotated][1:v]overlay=0:0[output]"
+            final_map = "[output]"
+
         cmd = [
             'ffmpeg', '-y',
             '-r', str(FPS),          # Set framerate before input for raw streams
@@ -106,19 +113,16 @@ class ReplaySystem:
             '-metadata:s:v:0', 'rotate=90', # Metadata rotation (Fast & low RAM)
             '-movflags', '+faststart',     # Better for mobile playback
             output_file
-        ]
+        ])
+        
         try:
-            # Run FFmpeg
+            # Draai FFmpeg
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"[SUCCESS] High-speed repackaging complete: {output_file}")
-            
-            # Cleanup
+            print(f"[SUCCESS] Verticale Clip klaar: {output_file}")
             os.remove(input_file)
             
         except subprocess.CalledProcessError as e:
             print(f"[ERROR] While processing raw video: {e}")
-
-            
 
     def stop(self):
         if self.is_running:
