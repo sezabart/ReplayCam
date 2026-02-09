@@ -7,6 +7,8 @@
 - microphone
 - better naming
 - language/translate support (NL, EN, SI)
+- battery support
+- 5Ghz wifi (need different board...)
 
 
 Shield: [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
