@@ -4,6 +4,8 @@ import datetime
 import subprocess
 import signal
 import sys
+import time
+
 from gpiozero import Button
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
@@ -38,10 +40,9 @@ class ReplaySystem:
         self.output = None
         self.is_running = False
 
-        # Controleer overlay
+        # Overlay check
         if not os.path.exists(OVERLAY_FILE):
-            print(f"[WARNING] Overlay bestand niet gevonden op: {OVERLAY_FILE}")
-            print("Video's worden verwerkt ZONDER overlay.")
+            print(f"[WARNING] Overlay not found {OVERLAY_FILE}")
             self.has_overlay = False
         else:
             self.has_overlay = True
@@ -84,16 +85,15 @@ class ReplaySystem:
         self.process_video(raw_filename, final_filename)
 
     def process_video(self, input_file, output_file):
-        # Stap 1: Roteer de video 90 graden met de klok mee (transpose=1)
-        # Gebruik transpose=2 voor tegen de klok in als je camera andersom hangt.
-        # [0:v] is de raw video input.
+        # Transpose=1 rotates 90 degrees, 2 for 270 (the other way)
+        # [0:v] is the raw video input.
         filters = "[0:v]transpose=2[rotated]" 
         
-        final_map = "[rotated]" # Standaard output is de gedraaide video
+        final_map = "[rotated]" # Make the standard output the rotated one
 
         if self.has_overlay:
-            # Als er een overlay is, plakken we die BOVENOP de gedraaide video
-            # We gaan ervan uit dat je Overlay.png nu 1080x1920 (Staand) is!
+            # If overlay, add it on top op video
+            # ASSUMING OVERLAY IS SAME AS RESOLUTION
             filters += ";[rotated][1:v]overlay=0:0[output]"
             final_map = "[output]"
 
@@ -108,7 +108,7 @@ class ReplaySystem:
         
         cmd.extend([
             '-filter_complex', filters,
-            '-map', final_map, # Zorg dat we de juiste stream pakken
+            '-map', final_map, # Make sure the right stream is used
             '-c:v', 'libx264',
             '-preset', 'ultrafast',
             '-crf', '23',
@@ -117,9 +117,9 @@ class ReplaySystem:
         ])
         
         try:
-            # Draai FFmpeg
+            start_time = time.time()
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print(f"[SUCCESS] Verticale Clip klaar: {output_file}")
+            print(f"[SUCCESS] Output to: {output_file}, took {time.time()-start_time} seconds.")
             os.remove(input_file)
             
         except subprocess.CalledProcessError as e:
