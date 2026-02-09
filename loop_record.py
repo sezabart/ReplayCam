@@ -26,6 +26,7 @@ PRE_TRIGGER_DURATION = 25
 POST_TRIGGER_DURATION = 5
 # Video settings
 RESOLUTION = (1920, 1080)
+ROTATION = 270 # Or 90 for example
 FPS = 25
 BITRATE = 15000000 # 15Mbps bitrate
 
@@ -59,15 +60,6 @@ class ReplaySystem:
         # Overlay
         self.overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
         if self.overlay.shape[:2] == (1680, 1920): # RAW Resolution?
-            self.picam2.pre_callback = self.apply_overlay
-        else:
-            print(f"[ERROR] Overlay is wrong dimensions: {self.overlay.shape[:2]}")
-
-        self.picam2.start()
-
-        # Overlay
-        self.overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
-        if self.overlay.shape[:2] == RESOLUTION:
             self.picam2.pre_callback = self.apply_overlay
         else:
             print(f"[ERROR] Overlay is wrong dimensions: {self.overlay.shape[:2]}")
@@ -108,10 +100,10 @@ class ReplaySystem:
         cmd = [
             'ffmpeg', '-y',
             '-r', str(FPS),          # Set framerate before input for raw streams
+            '-display_rotation', ROTATION
             '-i', input_file,
             '-c:v', 'copy',          # Direct stream copy (No re-encoding!)
-            '-metadata:s:v:0', 'rotate=90', # Metadata rotation (Fast & low RAM)
-            '-movflags', '+faststart',     # Better for mobile playback
+            '-movflags', 'faststart',     # Better for mobile playback
             output_file
         ]
         
