@@ -6,6 +6,8 @@ import signal
 import sys
 import time
 
+import cv2
+
 from gpiozero import Button
 from picamera2 import Picamera2, MappedArray
 from picamera2.encoders import H264Encoder
