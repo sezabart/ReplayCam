@@ -16,10 +16,11 @@ import cv2
 # --- REPLAYCAM CONFIG ---
 # Location of stored clips
 STORAGE_PATH = "recordings"
-# Overlay now via bitmap on picamera2
-OVERLAY = "overlay.png"
-# GPIO pin of button (or remote)
+# Has to be 1080x1920!:
+OVERLAY_FILE = "overlay.png"
+# GPIO pin of the trigger
 BUTTON_PIN = 17 
+BUTTON_PULLUP = False
 # Seconds before trigger to record (action)
 PRE_TRIGGER_DURATION = 25
 # Seconds after trigger to record (celebration)
@@ -126,7 +127,7 @@ class ReplaySystem:
 
 def main():
     system = ReplaySystem()
-    button = Button(BUTTON_PIN, pull_up=False)
+    button = Button(BUTTON_PIN, pull_up=BUTTON_PULLUP)
 
     def signal_handler(sig, frame):
         system.stop()
