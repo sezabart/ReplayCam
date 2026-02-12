@@ -19,7 +19,7 @@ import cv2
 # Location of stored clips
 STORAGE_PATH = "recordings"
 # Has to be 1080x1920!:
-OVERLAY_FILE = "overlay.png"
+OVERLAY = "overlay.png"
 # GPIO pin of the trigger
 BUTTON_PIN = 17 
 BUTTON_PULLUP = False
@@ -65,6 +65,7 @@ class ReplaySystem:
         # Overlay
         self.overlay = cv2.imread(OVERLAY, cv2.IMREAD_UNCHANGED) # OpenCV will read png into simple bitmap with alpha channel
         
+        self.picam2.pre_callback = self.apply_overlay
 
         self.picam2.start()
 
