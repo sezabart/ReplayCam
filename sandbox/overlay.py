@@ -26,15 +26,10 @@ class OverlayTester:
         but before it is saved/processed.
         """
         with MappedArray(request, "main") as m:
-            # Picamera2 YUV420 stores Y (luminance) in the first plane.
-            # We apply the overlay to the Y plane for a quick greyscale check,
-            # OR convert the whole buffer. For testing overlays, we'll 
-            # treat the MappedArray as a buffer we can manipulate.
+            # Picamera2 YUV420 stores Y (luminance) in the first plane. For testing overlays, we'll 
+            # treat the MappedArray's m.array as a buffer we can manipulate.
 
-            print(f"{m.array.shape=}")
-
-            # Draw a rectangle to prove its being hit
-            #cv2.rectangle(m.array, (50, 50), (50, 50), (255), -1)
+            print(f"{m.array.shape=}") # (1680, 1920)
 
             # 1. Grab JUST the visual part of the buffer (1920x1080)
             # This is a 'view', not a copy, so it's lightning fast.
